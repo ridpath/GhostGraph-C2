@@ -1,0 +1,7 @@
+cryptography==42.0.5
+asyncio  # Built-in
+quart==0.19.4  # Async Flask
+aiohttp==3.10.1  # Async HTTP/DNS
+dnspython==2.6.1
+psutil==5.9.8
+structlog==24.4.0  # Structured logging
