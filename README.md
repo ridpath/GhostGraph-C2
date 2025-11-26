@@ -55,6 +55,41 @@ ghostgraph/
 
 ```
 
+## ToDo / Roadmap
+
+Upcoming feature tracks to evolve GhostGraph-C2 platform:
+
+### 1. Malleable C2 Profiles
+- Configurable HTTP/HTTPS profiles (jitter, headers, encoding).
+- Template loader (`config/profiles/*.yaml`) with runtime transforms.
+- Minimal changes to `channels/multi_channel.py`.
+
+### 2. Advanced Post-Exploitation Modules
+- New tasks: `cred_dump.py`, `keylog.py`, `lateral_move.py`, `privesc.py`.
+- Registered via `TASK_HANDLERS` in `main_implant.py`.
+- Modular additions: no core changes required.
+
+### 3. Team Collaboration Features
+- Real-time dashboards and shared sessions over WebSocket.
+- Redis-backed pub/sub for `/collab/<session_id>`.
+- Role upgrades for teams, operators, and viewers.
+
+### 4. Plugin and Payload Extension System
+- Dynamic plugin loading via `plugins/` and `plugin_manager.py`.
+- Support for custom channels and tasks without forking.
+- CLI payload builder with templating.
+
+### 5. ML-Powered Adaptive Evasion
+- Predictive beacon intervals via `ml_evasion.py`.
+- Hooked into `timing_advanced.py` for adaptive patterns.
+- Dashboard graphs using Chart.js under `/metrics_ui`.
+
+### Additional Enhancements
+
+- Mobile implant support (Android/iOS via Kivy or Frida)
+- Serverless deployment modes (e.g., AWS Lambda, Cloudflare Workers)
+- Automated payload generator (Obfuscator-IO + templates)
+- Reporting export tools (`audit.csv`, implant logs in PDF)
 
 
 ------------------------
