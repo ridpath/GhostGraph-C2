@@ -12,15 +12,26 @@ GhostGraph C2 Framework
 Features
 ------------------------
 
-**Async & Non-blocking** implant-to-server comms  
-**Multi-channel Fallback:** ICMP, DNS, HTTP stego, Timing  
-**ChaCha20 + HMAC-SHA3** encryption with context-aware KDF  
-**Data Obfuscation:** XOR + shuffle + compression  
-**Fragmentation & Padding** for ICMP stealth  
-**Profile-based Config** for stealth/aggressive tuning  
-**Anti-analysis** (VM + Debugger + Timing checks)  
-**Flask/Quart Dashboard** for live command control  
-**Cross-platform** support (Linux & Windows implants)
+- Cross-platform implants (Linux, Windows, macOS) with platform-specific evasion and persistence
+- Multi-channel fallback: ICMP, DNS, HTTP, Timing with priority-based hopping and health checks
+- ChaCha20-Poly1305 + HMAC-SHA3 encryption for data in transit and at rest
+- Anti-analysis: sandbox detection, debugger traps, VM heuristics, timing checks, and advanced evasion (e.g., LD_PRELOAD, IsDebuggerPresent, CPUID)
+- Modular task engine: shell, download, upload, info, update with dynamic registry and command chaining
+- Live self-updates: in-memory hot patching with HMAC validation and periodic polling
+- Stealth profiles: process masquerading, output suppression, random delays, and obfuscation levels (XOR, shuffle, entropy)
+- Secure file I/O: ChaCha20 encryption with 3-pass DoD-style deletion and secure overwrite
+- Async dashboard built with Quart for high concurrency, with JWT/RBAC auth, WebSocket real-time, file upload/download, metrics, and HTML UI (webshell, upload form)
+- CTF-proven architecture: modular configs, fast channel switching, and payload templates with validation/encoders
+- FIPS/NIST-inspired design: key zeroization, system-bound identity, concealment mechanisms, and PBKDF2 hardening
+- Adaptive scheduling with jitter, backoff, and time modulation for low-profile ops
+- Comprehensive fingerprinting: OS/hardware/network/BIOS/CPUID/disk serial for unique IDs
+- Persistence mechanisms: cron, registry, schtasks, launchagent with service disguises
+- Server-side: Multi-protocol listener with metrics/backoff, command handler with DB/Redis for tasks/audits
+- Top-level runner: CLI with Metasploit RPC integration, auto-update (git/download with sig verification), and mode switching
+- OIDC support for external auth (e.g., Google/GitHub)
+- Audit logging, CSV exports, and self-test endpoints for forensics and monitoring
+
+
 
 ------------------------
 
@@ -29,15 +40,19 @@ Architecture
 
 ```
 ghostgraph/
-├── core/             # Crypto, scheduler, channels, obfuscation
-├── channels/         # Covert channels (icmp, dns, http, timing)
-├── implants/         # Implant logic
-├── server/           # Async server, listener, dashboard
-├── utilities/        # Anti-analysis, fingerprinting
-├── config/           # Profiles and payloads
-├── main_implant.py   # Implant runner
-├── main_server.py    # Server runner
-└── requirements.txt
+├── core/             # Crypto, scheduler, persistence, channel mgmt
+├── channels/         # Covert channels (icmp, dns, http, timing, multi)
+├── implants/         # Cross-platform implant logic (Linux, Windows, macOS)
+├── server/           # Async C2 server, dashboard, DB-backed handler
+├── tasks/            # Modular command implementations (shell, info, etc.)
+├── utilities/        # Anti-analysis, fingerprinting, cleanup
+├── config/           # CTF profiles and payload templates
+├── ghostgraph.py     # Unified CLI entrypoint (server or implant)
+├── main_implant.py   # Legacy implant runner (still supported)
+├── main_server.py    # Legacy server runner (still supported)
+├── requirements.txt  # Python package requirements
+└── LICENSE           # MIT License
+
 ```
 
 
@@ -56,27 +71,40 @@ Run the Server (with Dashboard)
 ------------------------
 
 ```bash
-GG_SECRET="your-shared-secret" GG_PROFILE=stealth python server/server.py
+GG_SECRET="your-shared-secret" python ghostgraph.py --mode server --profile stealth
 ```
 Dashboard will be accessible at:
 → http://localhost:5000/implants
+Supports profiles: stealth, aggressive, or a custom one via config/profiles.py
+
+Optional:
+Allowlist IPs: --allowed-ips 192.168.1.0/24
+Set dashboard port: --port 8443
+Adjust log level: --log-level DEBUG
 
 Run the Implant
 ```bash
-GG_SECRET="your-shared-secret" python main_implant.py stealth
+GG_SECRET="your-shared-secret" python ghostgraph.py --mode implant --profile stealth
 ```
 Or use profiles: aggressive, stealth, or custom.
+Will automatically select the correct implant based on OS: Linux, Windows, or macOS
+Fully supports anti-analysis, persistence, and modular commands
+Uses encrypted comms and self-update logic out of the box
 
 Available Channels
 ------------------------
 
-| Channel | Covert Method                 | Notes                             |
-|---------|-------------------------------|-----------------------------------|
-| `icmp`  | ICMP Echo w/ fragmentation    | Needs raw socket, very stealthy   |
-| `dns`   | DNS TXT or subdomain beacon   | Works well in most environments   |
-| `http`  | CSS comments, status stego    | Blends in with legit web traffic  |
-| `timing`| Bit-delay timing patterns     | Low bandwidth, highly covert      |
-| `multi` | Fallback + hopping            | Prioritized channel selection     |
+### Available Channels
+
+| Channel   | Covert Method                        | Notes                                                                 |
+|-----------|--------------------------------------|-----------------------------------------------------------------------|
+| `icmp`    | ICMP Echo w/ fragmentation           | Raw sockets, supports fragmentation and out-of-order delivery         |
+| `dns`     | DNS TXT & subdomain beaconing        | Obfuscated base32 + TXT response parsing; reliable in filtered nets   |
+| `http`    | CSS comments + status code stego     | HTTP blending via `/update.css` and stealthy status signals           |
+| `timing`  | Bit-delay encoding (timing channel)  | Sends data via bit-based delays; extremely low-bandwidth, hard to detect |
+| `multi`   | Priority-based fallback & rotation   | Dynamically selects most available channel at runtime                |
+
+Note: On multi-channel flow logic - channels are checked in priority order, all channels support encrypted, obfuscated data.
 
 ------------------------
 
@@ -109,12 +137,14 @@ python main_implant.py stealth
 Supported Implant Commands
 ------------------------
 
-| Command     | Description                        |
-|-------------|------------------------------------|
-| `info`      | Collects system fingerprint        |
-| `shell`     | Executes a shell command           |
-| `upload`    | *(Planned)* Upload file to host    |
-| `download`  | *(Planned)* Download file from host|
+| Command     | Description                                 | Notes                                       |
+|-------------|---------------------------------------------|---------------------------------------------|
+| `info`      | Collect system fingerprint and metadata     | Uses platform-aware fingerprinting logic    |
+| `shell`     | Execute shell command on target             | Captures stdout/stderr + exit code          |
+| `download`  | Exfiltrate file from target (encrypted)     | Uses ChaCha20 + base64 + compression        |
+| `upload`    | Upload file to target (encrypted)           | Uses ChaCha20 + base64; overwrites if exists|
+| `update`    | Apply live code update from C2              | In-memory only, HMAC-verified, hot-loaded   |
+
 
 All commands are task‑based and trackable via the dashboard.
 
@@ -132,34 +162,73 @@ Encryption Design
 **Payload Format:**
 version + salt + nonce + hmac + ciphertext
 
+
+
 ------------------------
 
 Implant Anti‑Analysis
 ------------------------
 
-- Detects debuggers (`/proc/self/status`, Windows APIs)
-- Virtualization detection (`/proc`, `/sys`, hypervisor strings)
-- Timing‑based anti‑debug heuristics
-- Randomized jitter + adaptive scheduling for stealth
+GhostGraph implants include built-in anti-analysis logic to evade sandboxes, debuggers, and virtual machines.
+All checks occur before persistence or C2 registration, with periodic re-checks during execution.
+
+----- Debugger Detection -----
+- Linux: Checks `/proc/self/status` for `TracerPid`
+- Windows: Uses `IsDebuggerPresent`, `CheckRemoteDebuggerPresent`
+- macOS: Scans for `lldb`, `gdb`, suspicious parent processes
+
+----- Virtualization Detection -----
+- Looks for hypervisor strings in `/proc`, `/sys`, and BIOS/DMI
+- Detects common platforms: QEMU, VirtualBox, VMware, Parallels
+
+----- Timing-Based Anti-Debugging -----
+- Uses high-resolution probes to detect breakpoints or step-throughs
+- Fails fast if delays indicate instrumentation or patching
+
+----- Kill Switch -----
+- If `GG_KILL=1` is present in the environment, implant exits immediately
+- Useful for CTF failsafe or controlled exits
+
+----- Runtime Re-evaluation -----
+- `AntiAnalysis().should_continue()` is re-run during the main loop
+- If analysis is detected post-startup, the implant exits cleanly
+
+----- Obfuscation and Delays -----
+- Randomized delays (5–20s) on startup to frustrate sandboxes
+- `stealth_level = high` disables stdout/stderr to reduce visibility
+
 
 ------------------------
 
-Flask Dashboard (via Quart)
+------------------------
+GhostGraph Dashboard (via Quart)
 ------------------------
 
-Start the dashboard server:
+The server and dashboard are now launched through the unified `ghostgraph.py` runner:
 
+Start the Server:
 ```bash
-python server/server.py
+python ghostgraph.py --mode server --profile stealth --secret your-shared-secret
 ```
-API Endpoints
-------------------------
+Dashboard Interface:
+→ Default port: http://localhost:5000/implants
+→ Can be changed via --port or GG_PORT env
 
-- `GET /implants` – List connected agents  
-- `POST /command/<implant_id>` – Send a command  
-- `GET /health` – Health check  
+API Endpoints (Async-Ready):
 
-All endpoints are **async-compatible** for high concurrency.
+GET /implants – List connected implants
+
+POST /command/<implant_id> – Dispatch task to implant
+
+GET /health – Health check endpoint
+
+Notes:
+
+All endpoints are fully async using Quart.
+
+Use --allowed-ips to restrict dashboard access.
+
+You can customize logging with --log-level.
 
 ------------------------
 
@@ -168,14 +237,59 @@ Payload Templates
 
 Located in: `config/payloads.py`
 
-```python
+GhostGraph includes a powerful, extensible payload template system designed for: Red teaming, CTFs, pentesting, and evasion research
+
+Supporting multiple platforms: Linux, Windows, macOS, and cross-platform
+
+Generating payloads with defensive countermeasures, obfuscation, and encryption
+
+Each payload template includes:
+
+- Compiler flags for hardening (-static, -O3, /MT, etc.)
+
+Obfuscation level and encoder:
+
+- Supported: base64, zlib+base64, xor, aes-gcm, chacha20
+
+Evasion techniques:
+
+- Anti-debugging, polyglot formats (e.g., ELF + shell), dual-purpose binaries
+
+Persistence strategies:
+
+- cron, systemd, registry, launchagent, rootkits, schtasks
+
+Command sets tailored per role (e.g., info, shell, upload, lateral_move)
+
+Example Template:
+```
 PAYLOAD_TEMPLATES = {
-    'ctf_beacon': {
-        'commands': ['info', 'shell'],
-        'encoder': 'base64 + zlib'
+    'linux_static': {
+        'platform': 'linux',
+        'compiler_flags': ['-static', '-O3', '-s', '-fPIC'],
+        'obfuscation': {
+            'level': 'medium',
+            'encoder': 'chacha20'
+        },
+        'evasion': {
+            'anti_debug': True,
+            'polyglot': False
+        },
+        'commands': ['info', 'shell', 'download', 'upload'],
+        'persistence': {
+            'methods': ['cron', 'systemd'],
+            'disguise': 'kernel-update.service'
+        }
     }
 }
 ```
+Features:
+- FIPS-compliant encryption (ChaCha20, AES-GCM)
+- Multi-stage loader support
+- Auto-queued commands based on fingerprinted OS
+- Tamper detection via HMAC
+- Overridable templates with validation and merging
+
 ------------------------
 Security Notes
 ------------------------
