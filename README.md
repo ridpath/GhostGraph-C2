@@ -3,7 +3,7 @@ GhostGraph C2 Framework
 
 > Modular, async, and covert C2 framework for red team operations and CTF challenges.
 > Built for stealth, resilience, and multi-channel comms (ICMP, DNS, HTTP, Timing).
-> 🚧 Graphless C2 is in alpha — expect instability. Use for CTFs, research, and red team experiments only.  
+> 🚧 GhostGraph C2 is in alpha — expect instability. Use for CTFs, research, and red team experiments only.  
 ![status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
 
