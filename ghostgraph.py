@@ -1,7 +1,6 @@
-# #!/usr/bin/env python3
 # ghostgraph.py
 # Top-level unified entry point for GhostGraph C2 framework
-# Production-ready: CLI args for mode (server/implant), profile/env config, logging init,
+# CLI args for mode (server/implant), profile/env config, logging init,
 # graceful shutdown, version check. Runs server or implant based on arg (default: server).
 # Secure env loading (no defaults in code), FIPS crypto init, audit startup.
 # New: Metasploit integration (RPC via msfrpc-like client), auto-update (git pull/download),
@@ -59,7 +58,7 @@ class MsfRpcClient:
     
     def _login(self, user, password):
         res = self._call('auth.login', [user, password])
-        self.token = res.get(b'token') if isinstance(res, dict) else None  # Bytes in msgpack
+        self.token = res.get('token')
         if not self.token:
             raise ValueError("MSF login failed")
     
@@ -170,12 +169,12 @@ async def main():
     if args.mode == 'server':
         # Validate server config
         config = validate_profile(args.profile, SERVER_PROFILES, SERVER_SCHEMA, base_config)
-        server = GhostGraphServer(config)
+        server = GhostGraphServer(base_config)  # Pass base_config as per server.py
         await server.run()
     elif args.mode == 'implant':
         # Validate implant config
         config = validate_profile(args.profile, CTF_PROFILES, IMPLANT_SCHEMA, base_config)
-        # Implant load and run (from provided main_implant.py logic, made async)
+        # Implant load and run (inline from provided main_implant.py, adapted to async)
         system = platform.system().lower()
         if system == 'linux':
             implant = LinuxImplant(config)
@@ -185,7 +184,7 @@ async def main():
             implant = MacOSImplant(config)
         else:
             implant = BaseImplant(config)
-        await implant.async_run()  # Assuming BaseImplant has async_run; sync run() calls it
+        await implant.async_run()  # Call async_run directly (assumed in BaseImplant)
     
     # Audit startup
     logger.info("GhostGraph started", mode=args.mode, profile=args.profile, version=VERSION, timestamp=datetime.utcnow().isoformat())
