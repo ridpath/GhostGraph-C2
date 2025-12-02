@@ -1,10 +1,43 @@
-GhostGraph C2 Framework
+<!--
+GhostGraph C2: Advanced asynchronous covert command and control framework
+for red team operations, adversary emulation, post-exploitation automation,
+sandbox-evasive implants, multi-channel fallback C2, ChaCha20-encrypted
+covert channels using ICMP, DNS TXT, HTTP steganography, and timing-based
+bit encoding.
+
+Primary SEO Terms:
+async covert C2, red team C2, endpoint evasion, encrypted command channel,
+DNS covert channel, ICMP backdoor payload, encrypted webshell replacement,
+C2 implants for CTF, cross-platform C2 agents, sandbox detection, 
+in-memory persistence, obfuscated payload delivery, dynamic fallback channels, 
+AAA covert operations testing, adversary simulation tool, EDR evasion research.
+
+Secondary SEO Terms:
+post-exploitation command framework, Python C2, endpoint anti-instrumentation,
+LD_PRELOAD evasion, implant hot-patching, secure task scheduling,
+threat emulation platform, APT behavior simulation, secure exfiltration.
+
+Audience:
+red team professionals, cybersecurity researchers, adversary emulation engineers,
+CTF competitors, exploit developers, threat operations groups, APT defenders.
+-->
+
+
+# GhostGraph C2 Framework
+
+![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
+![Tech: Async C2](https://img.shields.io/badge/tech-Async%20C2-blue)
+![Crypto: ChaCha20-Poly1305](https://img.shields.io/badge/crypto-ChaCha20--Poly1305-green)
+![Cross-Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)
+![Evasion-Focused](https://img.shields.io/badge/evasion-Advanced-red)
+![C2 Channels: ICMP/DNS/HTTP/Timing](https://img.shields.io/badge/channels-ICMP%20DNS%20HTTP%20Timing-yellow)
+![MIT License](https://img.shields.io/badge/license-MIT-blue)
+
 ------------------------
 
 > Modular, async, and covert C2 framework for red team operations and CTF challenges.
 > Built for stealth, resilience, and multi-channel comms (ICMP, DNS, HTTP, Timing).
-> 🚧 GhostGraph C2 is in alpha — expect instability. Use for CTFs, research, and red team experiments only.  
-![status: alpha](https://img.shields.io/badge/status-alpha-orange)
+> GhostGraph C2 is in alpha — expect instability. Use for CTFs, research, and red team experiments only.  
 
 
 ------------------------
@@ -31,6 +64,20 @@ Features
 - OIDC support for external auth (e.g., Google/GitHub)
 - Audit logging, CSV exports, and self-test endpoints for forensics and monitoring
 
+### MITRE ATT&CK Mapping
+
+| Behavior | Technique | Technique ID | Domain |
+|---------|-----------|--------------|--------|
+| Covert encrypted C2 traffic | Application Layer Protocol | T1071 | Enterprise |
+| DNS exfiltration / beaconing | Exfiltration Over DNS | T1048.003 | Enterprise |
+| ICMP covert channel | Exfiltration Over Unencrypted Network Protocol | T1048.002 | Enterprise |
+| Process masquerading | Masquerading | T1036 | Enterprise |
+| Anti-analysis checks | Virtualization/Sandbox Evasion | T1497 | Enterprise |
+| In-memory updates | Reflective Code Loading | T1620 | Enterprise |
+| Persistence via cron/schtasks/service | Boot or Logon Autostart Execution | T1547 | Enterprise |
+| Timing channel stealth mod | Low-Bandwidth Covert Channel | T1001.003 | Enterprise |
+| Multi-protocol fallback | Multi-Stage Channels | T1104 | Enterprise |
+| Industrial network pivot | Rogue System Deployment | T0826 | ICS |
 
 
 ------------------------
@@ -338,6 +385,27 @@ License
 
 This project is licensed under the [MIT License](LICENSE).
 
+
 > Use this software **only** in environments you **own** or have **explicit authorization** to test.
 > Misuse of this tool is illegal and unethical.
 
+<!--
+GhostGraph C2 SEO Footer
+
+Keywords:
+GhostGraph C2 framework, async command and control, post exploitation automation,
+encrypted covert communication channels, operator-driven implants, 
+multi-channel fallback DNS ICMP HTTP timing C2, python modular C2 platform,
+advanced evasion techniques malware, ICS/OT network pivoting, sandbox avoidance,
+HMAC secure communication, stealth persistence payloads,
+Linux Windows macOS implants, real-time C2 dashboard Quart WebSocket,
+Memory-resident loader, red team offensive tooling, CTF premium lab tool,
+APT-level adversary emulation framework
+
+Purpose:
+Maximize searchability for authorized security researchers and defenders seeking
+covert communication research frameworks for ethical testing.
+
+WARNING:
+Use only where explicitly authorized. Improper use is illegal.
+-->
